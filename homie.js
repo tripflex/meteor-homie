@@ -22,8 +22,12 @@ Homie.API = function(options) {
 	};
 };
 
-Homie.API.prototype.isAlive = async function(){
-	Homie.API.getHeartBeat();
+Homie.API.prototype.isAlive = async function(options){
+	try {
+		return await this.Query( 'GET', '/heart', options, 204 );
+	} catch( error ){
+		return error;
+	}
 };
 
 Homie.API.prototype.getHeartBeat = async function( options ) {
@@ -34,27 +38,10 @@ Homie.API.prototype.getHeartBeat = async function( options ) {
 	// 204 No Content
 
 	try {
-		return await this.Query( 'GET', '/heart', 204, options );
+		return await this.Query( 'GET', '/heart', options, 204 );
 	} catch( error ){
 		return error;
 	}
-
-	let mergedOptions = _.extend( this.defaults, options );
-
-	HTTP.get(this.options.url + '/heart', mergedOptions, (error, response) => {
-
-		let hasError = this.Utils.parseError( error, response, 204 );
-		let successData = this.Utils.parseResponse( response, 204 );
-
-		if( hasError ) {
-			Promise.reject(hasError);
-		} else if ( successData ){
-			Promise.resolve(successData);
-		} else {
-			Promise.reject( new Error( 'Unknown error getting heartbeat!' ) );
-		}
-
-	});
 };
 
 
@@ -89,22 +76,11 @@ Homie.API.prototype.getDeviceInfo = async function(options) {
 	// ]
 	// }
 
-	let mergedOptions = _.extend( this.defaults, options );
-
-	HTTP.get(this.options.url + '/device-info', mergedOptions, (error, response) => {
-
-		let hasError = this.Utils.parseError( error, response, 200 );
-		let successData = this.Utils.parseResponse( response, 200 );
-
-		if( hasError ) {
-			Promise.reject(hasError);
-		} else if ( successData ){
-			Promise.resolve(successData);
-		} else {
-			Promise.reject( new Error( 'Unknown error getting device info!' ) );
-		}
-
-	});
+	try {
+		return await this.Query( 'GET', '/device-info', options );
+	} catch( error ){
+		return error;
+	}
 };
 
 Homie.API.prototype.getNetworks = async function(options) {
@@ -129,22 +105,11 @@ Homie.API.prototype.getNetworks = async function(options) {
 	//
 	// {"error": "Initial Wi-Fi scan not finished yet"}
 
-	let mergedOptions = _.extend( this.defaults, options );
-
-	HTTP.get(this.options.url + '/networks', mergedOptions, (error, response) => {
-
-		let hasError = this.Utils.parseError( error, response, 200 );
-		let successData = this.Utils.parseResponse( response, 200, 'networks' );
-
-		if( hasError ) {
-			Promise.reject(hasError);
-		} else if ( successData ){
-			Promise.resolve(successData);
-		} else {
-			Promise.reject( new Error( 'Unknown error getting networks!' ) );
-		}
-
-	});
+	try {
+		return await this.Query( 'GET', '/networks', options, 200, 'networks' );
+	} catch( error ){
+		return error;
+	}
 };
 
 Homie.API.prototype.generateConfig = function(device_name, device_id, wifi_ssid, wifi_password, mqtt_host, custom_settings, wifi_options, mqtt_options, ota ) {
@@ -203,12 +168,12 @@ Homie.API.prototype.generateConfig = function(device_name, device_id, wifi_ssid,
  *
  * @param {String}  method       Method to use for HTTP call (GET, POST, PUT, etc)
  * @param {String}  endpoint     Endpoint on API to call (with prepended /), example: /device-info
- * @param {Integer} successCode  HTTP status code to consider a successful HTTP call (normally would be 200)
  * @param {Object}  options      Options object for HTTP call.  To POST/PUT data, set data key in object to value to use for data
+ * @param {Integer} successCode  HTTP status code to consider a successful HTTP call (optional - default 200)
  * @param {String}  dataKey      Specific key to return from data response (optional)
  * @returns {Promise<void>}
  */
-Homie.API.prototype.Query = async function( method, endpoint, successCode, options, dataKey ){
+Homie.API.prototype.Query = async function( method, endpoint, options, successCode, dataKey ){
 
 	let httpSucceessCode = successCode ? successCode : 200;
 	let mergedOptions = _.extend( this.defaults, options );
@@ -230,7 +195,10 @@ Homie.API.prototype.Query = async function( method, endpoint, successCode, optio
 
 };
 
-Homie.API.prototype.saveConfig = function(config, options) {
+Homie.API.prototype.saveConfig = async function(config, options) {
+
+	if( ! config ) return new Error( 'Config is missing!' );
+	if( ! options ) options = {};
 	// PUT /config
 	//
 	// Request body
@@ -254,38 +222,122 @@ Homie.API.prototype.saveConfig = function(config, options) {
 	//
 	// { "success": false, "error": "Device already configured" }
 
-	let mergedOptions = _.extend( this.defaults, options );
-
-	HTTP.put(this.options.url + '/networks', mergedOptions, (error, response) => {
-
-		if( error ){
-			Promise.reject( new Error( error ) );
-		} else if ( response.statusCode === 200 && response.data && response.data.networks ) {
-			Promise.resolve(response.data.networks);
-		} else if ( response.statusCode === 503 && response.data && response.data.error ){
-			Promise.reject( new Error( response.data.error ) );
-		} else {
-			Promise.reject( createError( response.statusCode, 'Error getting device info!' ) );
+	try {
+		// Set data object in options to JSON to configure device with
+		let callOptions = { data: config };
+		// Merge passed options, if any
+		if( options ){
+			callOptions = _.extend( callOptions, options );
 		}
 
-	});
+		return await this.Query( 'PUT', '/config', callOptions );
+	} catch( error ){
+		return error;
+	}
+};
 
-	var options = {
-		method: 'PUT',
-		url: '/config',
-		body: JSON.stringify( config )
-	};
+Homie.API.prototype.connectToWifi = async function(ssid, password,options) {
+	if( ! ssid ) return new Error( 'ssid is missing!' );
+	if( ! options ) options = {};
 
-	this.r(options, function(err, response, body) {
-		if (err) return callback(err);
-		if (response.statusCode === 200 && body && body.hasOwnProperty('success')) {
-			callback(null, true);
-		} else if (response.statusCode === 400 && body && body.hasOwnProperty('success') && body.hasOwnProperty('error')) {
-			callback(createError(400, body.error), false); // TODO: Change this to custom error type
-		} else if (response.statusCode === 403 && body && body.hasOwnProperty('success') && body.hasOwnProperty('error')) {
-			callback(createError(403, body.error), false); // TODO: Change this to custom error type
-		} else {
-			callback(createError(response.statusCode), false);
+	// PUT /wifi/connect
+	//
+	// Request params
+	//
+	// ssid - wifi ssid network name
+	// password - wifi password
+	//
+	// Response
+	//
+	// In case of success:
+	// 202 Accepted (application/json)
+	//
+	// { "success": true }
+	// In case of error in the payload:
+	// 400 Bad Request (application/json)
+	//
+	// { "success": false, "error": "[Reason why the payload is invalid]" }
+
+	try {
+		// Set data object in options to JSON to configure device with
+		let callOptions = { data: { ssid: ssid, password: password } };
+		// Merge passed options, if any
+		if( options ){
+			callOptions = _.extend( callOptions, options );
 		}
-	});
+
+		return await this.Query( 'PUT', '/wifi/connect', callOptions, 202 );
+	} catch( error ){
+		return error;
+	}
+};
+
+Homie.API.prototype.getWifiStatus = async function(options) {
+	// GET /wifi/status
+	//
+	// Possible status values
+
+	// idle
+	// connect_failed
+	// connection_lost
+	// no_ssid_available
+	// connected (along with a local_ip field)
+	// disconnected
+	//
+	// Response
+	//
+	// In case of success:
+	// 200 OK (application/json)
+	//
+	// { "status": "[status of wifi connection]" }
+
+	try {
+		return await this.Query( 'GET', '/wifi/status', options );
+	} catch( error ){
+		return error;
+	}
+};
+
+/*
+* Enable/disable the device to act as a transparent proxy between AP and Station networks.
+*
+* All requests that don't collide with existing api paths will be bridged to the destination according to the "Host" header in http. The destination host is called using the existing Wifi connection (Station Mode established after ssid/password is configured in "/wifi-connect") and all contents are bridged back to the connection made to the AP side.
+*
+* This feature can be used to help captive portals to perform cloud api calls during device enrollment using the esp wifi ap connection without having to patch the Homie firmware. By using the transparent proxy, all operations can be performed by the custom javascript running on the browser (/data/homie/ui_bundle.gz)
+* https is not supported.
+*
+* Important: The http request and responses must be kept as small as possible because all contents are transported using ram memory, which is very limited.
+*/
+Homie.API.prototype.setTransparentWifiProxy = async function(enabled) {
+	// PUT /proxy/control
+	//
+	// Request params
+	//
+	// enable - true or false indicating if the device has to bridge all unknown requests to the Internet (transparent proxy activated) or not.
+	//
+	// Response
+	//
+	// In case of success:
+	// 200 OK (application/json)
+	//
+	//   {
+	//       "success": true
+	//   }
+	// 400 Bad Request (application/json)
+	//   {
+	//       "success": false,
+	//       "error": "Reason why the payload is invalid"
+	//   }
+
+	try {
+		let callOptions = { data: { enabled: enabled } };
+
+		if( options ){
+			callOptions = _.extend( callOptions, options );
+		}
+
+		return await this.Query( 'PUT', '/proxy/control', callOptions );
+	} catch( error ){
+		return error;
+	}
 };
