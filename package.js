@@ -10,17 +10,16 @@ Package.onUse(function(api) {
     api.versionsFrom('1.0');
 
 	Npm.depends({
-		"http-errors": '1.6.2'
+		"http-errors": '1.6.2',
+		"lodash": '4.17.4'
 	});
 
-	api.export('Homie');
-
-    api.use('underscore');
     api.use('ecmascript');
 
     api.mainModule('homie.js');
 
 	api.addFiles( '.npm/package/node_modules/http-errors/index.js', 'client' );
+	api.addFiles( '.npm/package/node_modules/lodash/lodash.min.js', 'client' );
 	api.addFiles( 'utils.js', 'client' );
-
+	api.export('Homie');
 });
