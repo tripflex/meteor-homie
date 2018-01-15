@@ -1,5 +1,15 @@
 Homie = {
-	Utils: {}
+	Utils: {},
+	/**
+	 * Synchronous Sleep/Timeout `await this.timeout()`
+	 * Default delay is 2s, specify delay in ms in call to `this.timeout(2000)` for custom delays
+	 */
+	sleep( customDelay ) {
+		let delay = customDelay ? parseInt( customDelay ) : 2000;
+		return new Promise(function(resolve, reject) {
+			setTimeout(resolve, delay);
+		});
+	}
 };
 /**
  * Homie API Constructor
