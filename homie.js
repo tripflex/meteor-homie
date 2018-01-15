@@ -1,12 +1,14 @@
-import _ from 'lodash';
-
 Homie = {
 	Utils: {}
 };
-
+/**
+ * Homie API Constructor
+ * @param options
+ * @constructor
+ */
 Homie.API = function(options) {
 
-	this.options = _.assign({
+	this.options = Object.assign({
 		url: '192.168.123.1',
 		userAgent: 'Meteor Homie',
 		requestTimeout: 2000,
@@ -21,6 +23,11 @@ Homie.API = function(options) {
 	};
 };
 
+/**
+ * Get Device Heartbeat
+ * @param options
+ * @returns {Promise<void>}
+ */
 Homie.API.prototype.getHeartBeat = function( options ) {
 	/**
 	 * 	GET /heart
@@ -32,7 +39,11 @@ Homie.API.prototype.getHeartBeat = function( options ) {
 	return this.Query( 'GET', '/heart', options, 204 );
 };
 
-
+/**
+ * Get Device Info
+ * @param options
+ * @returns {Promise<void>}
+ */
 Homie.API.prototype.getDeviceInfo = function(options) {
 	/**
 	 * 	GET /device-info
@@ -67,7 +78,11 @@ Homie.API.prototype.getDeviceInfo = function(options) {
 	 */
 	return this.Query( 'GET', '/device-info', options );
 };
-
+/**
+ * Get WiFi Networks from Device
+ * @param options
+ * @returns {Promise<void>}
+ */
 Homie.API.prototype.getNetworks = function(options) {
 	/**
 	 * 	GET /networks
@@ -94,6 +109,19 @@ Homie.API.prototype.getNetworks = function(options) {
 	return this.Query( 'GET', '/networks', options, 200, 'networks' );
 };
 
+/**
+ * Generate Device Configuration JSON
+ * @param device_name
+ * @param device_id
+ * @param wifi_ssid
+ * @param wifi_password
+ * @param mqtt_host
+ * @param custom_settings
+ * @param wifi_options
+ * @param mqtt_options
+ * @param ota
+ * @returns {{name: *, device_id: *, wifi: {ssid: *, password: *, bssid: null, channel: *, ip: null, mask: null, gw: null, dns1: null, dns2: null}, mqtt: {host: *, port: number, base_topic: string, auth: boolean, username: null, password: null}, ota: {enabled: boolean}}}
+ */
 Homie.API.prototype.generateConfig = function(device_name, device_id, wifi_ssid, wifi_password, mqtt_host, custom_settings, wifi_options, mqtt_options, ota ) {
 	if (!wifi_password) throw new Error('wifi_password is empty');
 	if (!mqtt_host) throw new Error('mqtt_host is empty');
@@ -158,7 +186,7 @@ Homie.API.prototype.generateConfig = function(device_name, device_id, wifi_ssid,
 Homie.API.prototype.Query = function( method, endpoint, options, successCode, dataKey ){
 
 	let httpSuccessCode = successCode ? successCode : 200;
-	let mergedOptions = _.extend( this.defaults, options );
+	let mergedOptions = Object.assign( {}, this.defaults, options );
 
 	return new Promise( (resolve, reject) => {
 
@@ -169,7 +197,7 @@ Homie.API.prototype.Query = function( method, endpoint, options, successCode, da
 
 			if( hasError ) {
 				let responseError = hasError.statusCode ? '(' + hasError.statusCode + ') ' : '';
-				responseError += hasError.data && hasError.data.error ? hasError.data.error : hasError.content ? hasError.content : JSON.stringify( hasError );
+				responseError += hasError.data && hasError.data.error ? hasError.data.error : hasError.content ? hasError.content : hasError;
 
 				console.log( 'Homie.API.Query reject hasError', hasError, responseError );
 
@@ -189,6 +217,13 @@ Homie.API.prototype.Query = function( method, endpoint, options, successCode, da
 
 };
 
+/**
+ * Parse Query Errors
+ * @param error
+ * @param response
+ * @param successCode
+ * @returns {*}
+ */
 Homie.API.prototype.parseError = function( error, response, successCode ){
 
 	if( error ){
@@ -206,7 +241,13 @@ Homie.API.prototype.parseError = function( error, response, successCode ){
 
 	return false;
 };
-
+/**
+ * Parse Successful Response (and check if should return error)
+ * @param response
+ * @param successCode
+ * @param dataKey
+ * @returns {boolean}
+ */
 Homie.API.prototype.parseResponse = function( response, successCode, dataKey ){
 
 	if( response && response.statusCode && response.statusCode === successCode ){
@@ -223,7 +264,12 @@ Homie.API.prototype.parseResponse = function( response, successCode, dataKey ){
 
 	return false;
 };
-
+/**
+ * Save configuration to Device
+ * @param config
+ * @param options
+ * @returns {*}
+ */
 Homie.API.prototype.saveConfig = function(config, options) {
 
 	if( ! config ) return new Error( 'Config is missing!' );
@@ -258,12 +304,18 @@ Homie.API.prototype.saveConfig = function(config, options) {
 	let callOptions = { data: config };
 	// Merge passed options, if any
 	if( options ){
-		callOptions = _.extend( callOptions, options );
+		callOptions = Object.assign( {}, callOptions, options );
 	}
 
 	return this.Query( 'PUT', '/config', callOptions );
 };
-
+/**
+ * Connect device to WiFi
+ * @param ssid
+ * @param password
+ * @param options
+ * @returns {*}
+ */
 Homie.API.prototype.connectToWifi = function(ssid, password,options) {
 	if( ! ssid ) return new Error( 'ssid is missing!' );
 	if( ! options ) options = {};
@@ -292,12 +344,16 @@ Homie.API.prototype.connectToWifi = function(ssid, password,options) {
 	let callOptions = { data: { ssid: ssid, password: password } };
 	// Merge passed options, if any
 	if( options ){
-		callOptions = _.extend( callOptions, options );
+		callOptions = Object.assign( {}, callOptions, options );
 	}
 
 	return this.Query( 'POST', '/wifi/connect', callOptions, 202 );
 };
-
+/**
+ * Get WiFi Status
+ * @param options
+ * @returns {Promise<void>}
+ */
 Homie.API.prototype.getWifiStatus = function(options) {
 	/**
 	 * 	GET /wifi/status
@@ -338,17 +394,20 @@ Homie.API.prototype.getConfig = function(options) {
 	return this.Query( 'GET', '/config', options );
 };
 
-/*
-* Enable/disable the device to act as a transparent proxy between AP and Station networks.
-*
-* All requests that don't collide with existing api paths will be bridged to the destination according to the "Host" header in http. The destination host is called using the existing Wifi connection (Station Mode established after ssid/password is configured in "/wifi-connect") and all contents are bridged back to the connection made to the AP side.
-*
-* This feature can be used to help captive portals to perform cloud api calls during device enrollment using the esp wifi ap connection without having to patch the Homie firmware. By using the transparent proxy, all operations can be performed by the custom javascript running on the browser (/data/homie/ui_bundle.gz)
-* https is not supported.
-*
-* Important: The http request and responses must be kept as small as possible because all contents are transported using ram memory, which is very limited.
-*/
-Homie.API.prototype.setTransparentWifiProxy = function(enabled) {
+/**
+ * Enable/disable the device to act as a transparent proxy between AP and Station networks.
+ *
+ * All requests that don't collide with existing api paths will be bridged to the destination according to the "Host" header in http. The destination host is called using the existing Wifi connection (Station Mode established after ssid/password is configured in "/wifi-connect") and all contents are bridged back to the connection made to the AP side.
+ *
+ * This feature can be used to help captive portals to perform cloud api calls during device enrollment using the esp wifi ap connection without having to patch the Homie firmware. By using the transparent proxy, all operations can be performed by the custom javascript running on the browser (/data/homie/ui_bundle.gz)
+ * https is not supported.
+ *
+ * Important: The http request and responses must be kept as small as possible because all contents are transported using ram memory, which is very limited.
+ *
+ * @param enabled
+ * @returns {Promise<void>}
+ */
+Homie.API.prototype.setProxy = function(enabled) {
 	/**
 	 * 	PUT /proxy/control
 	    v2.1 POST /proxy/control
@@ -374,7 +433,7 @@ Homie.API.prototype.setTransparentWifiProxy = function(enabled) {
 	let callOptions = { data: { enabled: enabled } };
 
 	if( options ){
-		callOptions = _.extend( callOptions, options );
+		callOptions = Object.assign( {}, callOptions, options );
 	}
 
 	return this.Query( 'POST', '/proxy/control', callOptions );
