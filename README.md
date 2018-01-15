@@ -36,8 +36,6 @@ async function f(){
 ## API Methods
 This package exports `Homie` object, along with `Homie.API` for API calls
 
-Please see [Homie2Config](https://github.com/tripflex/node-homie2-config) documentation for specifics on available methods.
-
 Currently available are:
 * `getHeartBeat(options)`
 * `getDeviceInfo(options)`
