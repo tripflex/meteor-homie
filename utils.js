@@ -1,12 +1,12 @@
-if( ! MOSRPC ){
-	MOSRPC = {};
+if( ! Homie ){
+	Homie = {};
 }
 
 /**
- * MOSRPC Utilities
- * @type {{randomID: MOSRPC.Utils.randomID, remNullProps: MOSRPC.Utils.remNullProps}}
+ * Homie Utilities
+ * @type {{randomID: Homie.Utils.randomID, remNullProps: Homie.Utils.remNullProps}}
  */
-MOSRPC.Utils = {
+Homie.Utils = {
 
 	/**
 	 * Generate Random ID
