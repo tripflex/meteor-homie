@@ -1,8 +1,8 @@
 Package.describe({
-    name: 'tripflex:homie',
+    name: 'tripflex:mos-rpc',
     version: '1.0.0',
-    summary: 'Homie IoT API and other misc helper methods',
-    git: 'https://github.com/tripflex/meteor-homie',
+    summary: 'Mongoose OS RPC IoT API and other misc helper methods',
+    git: 'https://github.com/tripflex/meteor-mos-rpc',
     documentation: 'README.md'
 });
 
@@ -11,8 +11,8 @@ Package.onUse(function(api) {
 
     api.use('ecmascript');
 
-    api.mainModule('homie.js');
+    api.mainModule('mos-rpc.js');
 
 	api.addFiles( 'utils.js', 'client' );
-	api.export('Homie');
+	api.export('MOSRPC');
 });
